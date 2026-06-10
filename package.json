@@ -1,0 +1,23 @@
+{
+  "name": "housing-element",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Conversational Real Estate Discovery engine — localized climate & insurance risk profiles. Step 1: chat shell (Next.js) over a mocked LLM, built test-first.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "start": "npm run start -w web",
+    "lint": "npm run lint -w web",
+    "test": "npm run test -w web",
+    "test:watch": "npm run test:watch -w web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.8.4"
+  }
+}
