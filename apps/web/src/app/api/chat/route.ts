@@ -1,4 +1,4 @@
-import { mockLLMProvider } from '@/lib/llm/mock-provider';
+import { getProvider } from '@/lib/llm/get-provider';
 import type { Message } from '@/lib/llm/types';
 
 /**
@@ -8,8 +8,9 @@ import type { Message } from '@/lib/llm/types';
  * Response: `{ reply: string }` on success, `{ error: string }` with status 400 on
  * malformed input.
  *
- * The reply is produced by the {@link mockLLMProvider} seam in step 1; swapping in
- * the real model later does not change this contract.
+ * The reply comes from whichever provider {@link getProvider} selects — the
+ * deterministic mock by default, OpenAI when LLM_PROVIDER=openai. Both implement
+ * the same seam, so this contract is unchanged regardless.
  */
 export async function POST(request: Request): Promise<Response> {
   let body: unknown;
@@ -27,6 +28,6 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const reply = await mockLLMProvider.generate(messages as Message[]);
+  const reply = await getProvider().generate(messages as Message[]);
   return Response.json({ reply });
 }
