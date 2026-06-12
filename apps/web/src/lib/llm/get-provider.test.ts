@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getProvider } from '@/lib/llm/get-provider';
 import { MockLLMProvider } from '@/lib/llm/mock-provider';
 import { OpenAIProvider } from '@/lib/llm/openai-provider';
+import { RagProvider } from '@/lib/rag/rag-provider';
 
 describe('getProvider', () => {
   afterEach(() => {
@@ -26,5 +27,28 @@ describe('getProvider', () => {
     vi.stubEnv('LLM_PROVIDER', 'openai');
     vi.stubEnv('OPENAI_API_KEY', '');
     expect(() => getProvider()).toThrow(/OPENAI_API_KEY is required/);
+  });
+
+  describe('RAG_ENABLED=true', () => {
+    it('returns a RagProvider when all required env vars are set', () => {
+      vi.stubEnv('RAG_ENABLED', 'true');
+      vi.stubEnv('PINECONE_API_KEY', 'pcsk-test-key');
+      vi.stubEnv('NOMINATIM_USER_AGENT', 'housing-element/test');
+      expect(getProvider()).toBeInstanceOf(RagProvider);
+    });
+
+    it('throws when PINECONE_API_KEY is missing', () => {
+      vi.stubEnv('RAG_ENABLED', 'true');
+      vi.stubEnv('PINECONE_API_KEY', '');
+      vi.stubEnv('NOMINATIM_USER_AGENT', 'housing-element/test');
+      expect(() => getProvider()).toThrow(/PINECONE_API_KEY is required/);
+    });
+
+    it('throws when NOMINATIM_USER_AGENT is missing', () => {
+      vi.stubEnv('RAG_ENABLED', 'true');
+      vi.stubEnv('PINECONE_API_KEY', 'pcsk-test-key');
+      vi.stubEnv('NOMINATIM_USER_AGENT', '');
+      expect(() => getProvider()).toThrow(/NOMINATIM_USER_AGENT is required/);
+    });
   });
 });
