@@ -21,7 +21,11 @@ function postRequest(body: unknown): Request {
   });
 }
 
-const FIRE_PROFILE: RiskProfile = { fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' } };
+const FIRE_PROFILE: RiskProfile = {
+  fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' },
+  flood: { level: 'High', zone: 'AE' },
+  quake: { pgaBand: '0.4-0.6 g', faultZone: false },
+};
 
 beforeEach(() => {
   vi.clearAllMocks();

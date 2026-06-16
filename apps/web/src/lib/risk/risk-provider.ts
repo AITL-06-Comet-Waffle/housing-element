@@ -1,5 +1,7 @@
 import type { GeoPoint, RiskProfile } from '@/lib/risk/types';
 import { getFireZone } from '@/lib/risk/hazards/fire';
+import { getFloodZone } from '@/lib/risk/hazards/flood';
+import { getQuake } from '@/lib/risk/hazards/quake';
 
 /**
  * Seam for all risk lookups. PostGIS spatial joins back it today; a future FastAPI
@@ -11,13 +13,23 @@ export interface RiskProvider {
 
 /**
  * Risk provider backed by PostGIS point-in-polygon lookups. The hazard adapters are
- * injected, so the provider is unit-testable with fakes (no database).
+ * injected, so the provider is unit-testable with fakes (no database). The three
+ * lookups are independent, so they run concurrently.
  */
 export class PostgisRiskProvider implements RiskProvider {
-  constructor(private readonly fireZone: typeof getFireZone = getFireZone) {}
+  constructor(
+    private readonly fireZone: typeof getFireZone = getFireZone,
+    private readonly floodZone: typeof getFloodZone = getFloodZone,
+    private readonly quake: typeof getQuake = getQuake,
+  ) {}
 
   async assess(point: GeoPoint): Promise<RiskProfile> {
-    return { fire: await this.fireZone(point) };
+    const [fire, flood, quake] = await Promise.all([
+      this.fireZone(point),
+      this.floodZone(point),
+      this.quake(point),
+    ]);
+    return { fire, flood, quake };
   }
 }
 

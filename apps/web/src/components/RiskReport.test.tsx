@@ -29,17 +29,25 @@ describe('RiskReport', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/california/i);
   });
 
-  it('renders the matched address and a Wildfire card for a successful assessment', () => {
+  it('renders the matched address and a card per hazard for a successful assessment', () => {
     const result: RiskApiResponse = {
       ok: true,
       matched: '1234 PACIFIC COAST HWY, MALIBU, CA, 90265',
-      riskProfile: { fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' } },
+      riskProfile: {
+        fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' },
+        flood: { level: 'Minimal', zone: 'X' },
+        quake: { pgaBand: '0.4-0.6 g', faultZone: true },
+      },
     };
     render(<RiskReport result={result} />);
 
     expect(screen.getByText(/1234 PACIFIC COAST HWY/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Wildfire' })).toBeInTheDocument();
-    expect(screen.getByText('Very High')).toBeInTheDocument();
-    expect(screen.getByText(/Local Responsibility Area/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Flood' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Earthquake' })).toBeInTheDocument();
+    expect(screen.getByText('Very High')).toBeInTheDocument(); // fire
+    expect(screen.getByText('Minimal')).toBeInTheDocument(); // flood level
+    expect(screen.getByText('0.4-0.6 g PGA')).toBeInTheDocument(); // quake band
+    expect(screen.getByText(/Alquist-Priolo/)).toBeInTheDocument(); // fault detail
   });
 });

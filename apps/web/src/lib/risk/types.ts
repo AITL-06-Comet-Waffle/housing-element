@@ -21,9 +21,29 @@ export interface FireRisk {
   responsibilityArea: ResponsibilityArea | null;
 }
 
-/** Per-hazard risk profile. Fire only for now; flood + quake join in Phase 2. */
+/** FEMA flood-zone risk level, derived from the National Flood Hazard Layer. */
+export type FloodLevel = 'High' | 'Moderate' | 'Minimal' | 'Undetermined' | 'None';
+
+/** Forward-looking flood risk for a point, from FEMA NFHL flood-hazard areas. */
+export interface FloodRisk {
+  level: FloodLevel;
+  /** Raw FEMA flood zone code (e.g. 'AE', 'VE', 'X'); null if no mapped panel. */
+  zone: string | null;
+}
+
+/** Earthquake risk: ground shaking (USGS PGA, 2% in 50yr) + surface fault rupture. */
+export interface QuakeRisk {
+  /** Peak Ground Acceleration band, e.g. '0.4-0.6 g'; null if outside the grid. */
+  pgaBand: string | null;
+  /** Within a CA Alquist-Priolo Earthquake Fault Zone (surface-rupture hazard). */
+  faultZone: boolean;
+}
+
+/** Per-hazard risk profile (each hazard at its native scale; no composite). */
 export interface RiskProfile {
   fire: FireRisk;
+  flood: FloodRisk;
+  quake: QuakeRisk;
 }
 
 /** Why a geocode did not yield a usable California point. */
