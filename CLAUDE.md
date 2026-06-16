@@ -1,105 +1,102 @@
 # Housing Element — Project Guide
 
-Conversational **Real Estate Discovery** engine: home buyers search by ZIP code or natural-language
-prompt and get localized climate/insurance risk profiles, insurance-viability warnings, and
-natural-language safety evaluations from a hybrid ML/RAG backend.
+**Forward-looking California address-risk assessment.** A home buyer enters a CA street address and
+gets a per-hazard climate-risk profile — **wildfire, flood, earthquake** — each at its native scale,
+as structured data plus a grounded natural-language safety evaluation. Risk numbers come from
+authoritative geospatial layers (point-in-polygon); the LLM explains them and never invents them.
 
-**Current state — Steps 1–2: a chat shell that can talk to a real LLM.** A Next.js chat UI calls
-`/api/chat`, which selects an `LLMProvider` via `getProvider()`: a deterministic **mock by default**,
-or **OpenAI** when `LLM_PROVIDER=openai`. The fine-tuned model, RAG, and the product's risk features
-come later. Built test-first. See `README.md` to run.
+> **Plan-of-record: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).** Read it before
+> building — it carries the full target architecture, the Q1–Q13 design decisions with rationale,
+> and the phased build (tracked as tasks).
 
 > Working in `apps/web`? Heed `apps/web/AGENTS.md`: this is Next.js **16**, newer than older training
 > data. The full docs are bundled at `node_modules/next/dist/docs/` — consult them before writing
 > Next-specific code (route handlers, config, etc.).
 
-## Decisions made (step 1)
+## Where the code is today vs. where it's going
 
-| Area      | Decision                                                                                     | Why                                                                                                                                       |
-| --------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Scope     | Chat shell only; defer ML/RAG                                                                | Get the conversational skeleton + plumbing right before any model work                                                                    |
-| Backend   | Next.js `/api/chat` is the whole backend for now; Python deferred                            | Fewest moving parts; Python arrives later as its own service                                                                              |
-| Repo      | npm-workspaces monorepo: `apps/web`, `services/ml` (placeholder), `packages/` reserved       | Structure is ready for the Python service + shared TS with no later migration                                                             |
-| Framework | Next 16 App Router + TypeScript + Tailwind v4 + ESLint                                       | Modern stable defaults; Route Handler for the API, Client Component for the chat                                                          |
-| LLM seam  | `LLMProvider` interface (`apps/web/src/lib/llm/types.ts`)                                    | Swapping in the real/fine-tuned model (or an HTTP call to `services/ml`) is a one-file change — UI, contract, and tests don't move        |
-| Transport | Plain request/response JSON: `{ messages } → { reply }`; client-side history; no persistence | "Most basic"; the route is stateless and takes the full `messages[]` (the shape real LLM APIs expect); streaming is a contained later add |
-| Testing   | TDD with Vitest + React Testing Library; tests colocated (`*.test.ts[x]`); no E2E yet        | Deterministic, offline, fast; covers provider, route, components, and the send→reply flow                                                 |
-| Tooling   | Prettier (single quotes, 99-width); Next pinned exactly; `turbopack.root` pinned to repo     | Consistent style; no version drift; correct workspace boundary (avoids a stray `$HOME` lockfile)                                          |
+**Today (on `main`) — a chat shell + a fire-only RAG layer that is being superseded:**
 
-## Decisions made (step 2 — connect to a real LLM)
+- Next 16 chat UI → `POST /api/chat` → `getProvider()` → `LLMProvider` (deterministic **mock** by
+  default; **OpenAI** when `LLM_PROVIDER=openai`).
+- With `RAG_ENABLED=true`, `getProvider()` wraps the provider in `RagProvider`: geocodes the last
+  user message via Nominatim → county, vector-searches Pinecone (CAL FIRE DINS post-fire summaries)
+  filtered by county, injects the hits as context. **Fire-only, county-level, historical.**
+- A Postgres DB (`homebuyer_data`, port 5433) holds **parcel-level** CAL FIRE DINS inspections;
+  `scripts/pinecone/` aggregate them to (incident, county, city) summaries for Pinecone.
 
-**What changed:** `/api/chat` can now talk to a real LLM without altering the UI or the API contract.
+**Target (the pivot) — per the plan:** address-*assessment*, not chat; *forward-looking* hazard
+layers, not historical damage; *structured spatial lookups*, not vector search, for the risk numbers.
 
-- `getProvider()` (`lib/llm/get-provider.ts`) picks the provider from `LLM_PROVIDER` — `mock` by
-  default, `openai` for the real model — and throws a clear error if `openai` is set without
-  `OPENAI_API_KEY`.
-- `OpenAIProvider` (`lib/llm/openai-provider.ts`) calls OpenAI Chat Completions with an **injected**
-  client (so it unit-tests offline), prepends the system prompt, and returns the reply text.
-- Added the persona (`lib/llm/system-prompt.ts`) and an env template (`apps/web/.env.example`).
-- `route.ts` now calls `getProvider().generate(...)` instead of importing the mock directly.
-- Added 6 tests (provider + factory). The mock stays the default, so every Step 1 test and the
-  `{ messages } → { reply }` contract are unchanged.
+```
+address (form)
+  → Census geocode  → precision gate
+  → PostGIS point-in-polygon (FHSZ / NFHL / USGS + Alquist-Priolo)   ← risk FACTS (tool-use)
+  → [Pinecone DINS retrieval]                                        ← narrative COLOR (vector RAG)
+  → LLM grounded narration                                           ← never invents numbers
+  → POST /api/risk → { riskProfile, narrative, citations }
+```
 
-| Area      | Decision                                                                                                                                  |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Provider  | OpenAI via the official `openai` SDK (Chat Completions), wrapped in `OpenAIProvider`                                                      |
-| Selection | `getProvider()` reads `LLM_PROVIDER` (default `mock`); `=openai` enables the real model                                                   |
-| Secrets   | `OPENAI_API_KEY` in `apps/web/.env.local` (gitignored); `.env.example` committed; server-only; fail-fast if missing                       |
-| Persona   | minimal system prompt in `lib/llm/system-prompt.ts`; provider prepends it, mock ignores it                                                |
-| Model     | env `OPENAI_MODEL` (default `gpt-4o-mini`); `max_completion_tokens` capped                                                                |
-| Streaming | deferred; non-streaming `{ reply }` unchanged                                                                                             |
-| Testing   | OpenAI client is injected for offline tests; the factory test runs under the Node env (server code, avoids the SDK's jsdom browser guard) |
+The current chat/RAG code is refactored (RAG → color-only) or parked (`/api/chat` → phase 1.5),
+**not deleted**. See the plan for the migration.
 
-Python (`services/ml`) was **deferred again** — the backend stays Node/TypeScript for now.
+## Key decisions (summary — full rationale in the plan)
+
+- **Forward-looking risk**, not historical record; DINS demoted to supplementary color.
+- **Structured-first hybrid:** PostGIS spatial joins are the source of truth for risk numbers;
+  Pinecone is unstructured color; the LLM narrates. Vector search is *not* the primary retrieval.
+- **Address-only input; assessment, not discovery.** Geocoding is critical-path — US **Census**
+  geocoder (free), with a **mandatory precision gate**. ZIP / natural-language discovery deferred.
+- **California-only**, **Tier-1 hazards** (fire / flood / quake). Insurance + water = phase 2.
+- **Pre-ingest** hazard layers into **PostGIS** (offline Python ETL); query **Node-direct** behind a
+  new **`RiskProvider`** seam. A runtime FastAPI `services/ml` is deferred until a model needs it.
+- **Per-hazard native scales**, no fake composite. The LLM narrates computed values only.
+- **The graded "AI element" = RAG + tool-use** (PostGIS facts + Pinecone color + LLM generation).
+  No LLM fine-tuning; a DINS *structure-vulnerability* classifier is a phase-2 ML stretch.
 
 ## Conventions
 
-- **TDD:** write the failing test first, then the code. Tests sit next to what they cover.
-- **The seam is sacred:** all model access goes through `LLMProvider` (obtained via `getProvider()`).
-  Don't call a model or `services/ml` directly from the route or UI — add or extend a provider.
-- **API contract is fixed:** `POST /api/chat` with `{ messages: [{ role, content }] }` → `{ reply }`.
-  Keep it stable as the backend grows behind it.
-- **Provider config + secrets:** real-LLM settings live in `apps/web/.env.local` (gitignored):
-  `LLM_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`. Never commit a real key; tests always use the mock.
-- **Imports:** follow TS idiom (named imports) here — the global "import modules, not symbols" rule is
-  Python-specific and unusable with JSX/React. Otherwise the global style guide applies (2-space,
-  single quotes, ~99 char).
+- **TDD:** failing test first, then code (Vitest + React Testing Library; tests colocated
+  `*.test.ts[x]`). Mock-by-default so the suite runs offline, free, deterministic.
+- **Seams are sacred:** all model access through **`LLMProvider`** (via `getProvider()`); all risk
+  access through **`RiskProvider`**; the geocoder sits behind its own small interface (so free Census
+  → Mapbox/Smarty later is a one-file swap). Don't call a model, the DB, or `services/ml` directly
+  from the route or UI — add or extend a provider.
+- **API contract (updated):** the new primary contract is **`POST /api/risk`** with `{ address }` →
+  `{ riskProfile, narrative, citations }`. The values in `riskProfile` are authoritative and
+  deterministic; the UI renders cards from them, so a slow/failed LLM **degrades gracefully**. *(The
+  old "fixed `/api/chat` `{messages}→{reply}`" rule is superseded — `/api/chat` is parked for
+  conversational follow-up in phase 1.5.)*
+- **The LLM never invents risk values.** It explains codes (Zone AE, FHSZ Very High, PGA) and
+  recommends next steps, grounded in the structured profile + retrieved color. Never fabricate
+  scores, premiums, or statistics.
+- **Secrets:** server-only env in `apps/web/.env.local` (gitignored): `LLM_PROVIDER`,
+  `OPENAI_API_KEY`, `OPENAI_MODEL`, plus risk/RAG config (`PINECONE_*`, the DB URL). Never commit a
+  key; tests always use the mock. No `NEXT_PUBLIC_` for secrets.
+- **Stack:** npm-workspaces monorepo (`apps/web`, `services/ml` placeholder, `packages/` reserved);
+  Next 16 App Router + TS + Tailwind v4; Prettier (single quotes, 99-width); deps exact-pinned;
+  `turbopack.root` pinned to repo.
+- **Imports:** TS idiom (named imports) here — the global "import modules, not symbols" rule is
+  Python-specific. Otherwise the global style guide applies (2-space, single quotes, ~99 char).
+- **Data/ETL is Python**, run by a human (`uv`, Python 3.13+): `scripts/ingest/` loads CA hazard
+  layers into PostGIS; `scripts/pinecone/` build the DINS color corpus. These touch the network and
+  the DB — never run them from tests.
 
-## Production-oriented decisions
+## Status & gaps
 
-- Stateless `/api/chat` that receives the whole conversation — horizontally scalable and already
-  matches real chat-completion APIs, so the real model needs no contract change.
-- Provider seam isolates the model; switching mock → OpenAI → a fine-tuned model never ripples into
-  the UI or contract.
-- Secrets are env-only and server-side (no `NEXT_PUBLIC_` prefix), so the key never reaches the
-  browser; the OpenAI SDK's own browser guard confirms this.
-- Boundary validation on the route (400 on empty / missing / unparseable bodies); no defensive bloat
-  elsewhere.
-- Exact-pinned dependencies and a pinned `turbopack.root` for reproducible builds.
-- Deterministic mock so the test suite runs offline, free, and reproducibly (CI-friendly).
+- **The pivot is planned, not built.** Phases 0–5 are tracked tasks; see the plan. The risk features
+  (PostGIS spine, `/api/risk`, Census geocode, precision gate, per-hazard cards) **do not exist yet**.
+- Current code is fire-only, county-level, Nominatim-geocoded RAG over *historical* DINS data — the
+  thing being replaced.
+- No persistence, auth, rate limiting, streaming, observability, CI, E2E, or deployment config.
+- `README.md` still describes the old chat-shell product and needs the same update (Phase 5).
+- 2 moderate npm advisories unreviewed (`npm audit`).
 
-## Not production-ready yet (intentional gaps)
+## How we got here (history)
 
-- **Default replies are the mock** (echo); OpenAI is available behind `LLM_PROVIDER=openai`, but the
-  _fine-tuned_ model and RAG grounding are still to come.
-- **No persistence** — conversation lives in client React state; a refresh clears it.
-- **No auth, rate limiting, or abuse protection** on `/api/chat` (matters once it calls a paid API).
-- **No streaming** — the full reply is returned at once.
-- **No observability** — no logging, metrics, or error reporting.
-- **2 moderate npm advisories** unreviewed (run `npm audit`).
-- **No CI, no E2E tests, no deployment config.**
-
-## Still to implement (roadmap)
-
-1. **`services/ml`** — Python/FastAPI ML-RAG service (`uv`, Python 3.13+, `pytest`).
-2. **Fine-tuned model behind `LLMProvider`** — a generic OpenAI provider is wired; next is the
-   fine-tuned model (directly, or via an HTTP call to `services/ml`).
-3. **RAG over hazard data** — wildfire, earthquake, insurance availability, water scarcity.
-4. **Product features** — ZIP + descriptive search, localized risk profiles, insurance-viability
-   warnings, natural-language safety evaluations.
-5. **Streaming** responses (SSE) behind the same route.
-6. **Persistence** — conversations / saved searches (+ a database choice).
-7. **Auth** and per-user data.
-8. **Rate limiting / API hardening.**
-9. **Deployment** — web (e.g. Vercel) + the Python service; secret/key management for the model.
-10. **CI** (test + lint + build) and **E2E** (Playwright) once the flows are richer.
+- **Step 1** — npm-workspaces monorepo; Next 16 chat UI; `LLMProvider` seam with a deterministic
+  mock; `POST /api/chat` `{messages}→{reply}`; TDD throughout.
+- **Step 2** — `OpenAIProvider` (injected client, offline-testable) selected via
+  `getProvider()` / `LLM_PROVIDER`.
+- **Fire RAG layer** — `RagProvider` + Pinecone DINS + Nominatim geocode (county-level); Postgres
+  DINS + `scripts/pinecone/` aggregation. **Superseded by the plan above.**
