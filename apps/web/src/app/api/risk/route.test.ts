@@ -3,15 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/geocode/census', () => ({ geocode: vi.fn() }));
 vi.mock('@/lib/risk/risk-provider', () => ({ getRiskProvider: vi.fn() }));
+vi.mock('@/lib/llm/narrate', () => ({ narrate: vi.fn() }));
 
 import { POST } from './route';
 import { geocode } from '@/lib/geocode/census';
 import { getRiskProvider } from '@/lib/risk/risk-provider';
+import { narrate } from '@/lib/llm/narrate';
 import type { RiskProfile } from '@/lib/risk/types';
 import type { RiskProvider } from '@/lib/risk/risk-provider';
 
 const geocodeMock = vi.mocked(geocode);
 const getRiskProviderMock = vi.mocked(getRiskProvider);
+const narrateMock = vi.mocked(narrate);
 
 function postRequest(body: unknown): Request {
   return new Request('http://localhost/api/risk', {
@@ -36,6 +39,7 @@ describe('POST /api/risk', () => {
     geocodeMock.mockResolvedValue({ ok: true, point: { lat: 34, lon: -118 }, matched: '1 A ST, LA, CA' });
     const assess = vi.fn().mockResolvedValue(FIRE_PROFILE);
     getRiskProviderMock.mockReturnValue({ assess } as RiskProvider);
+    narrateMock.mockResolvedValue('Grounded risk summary.');
 
     const res = await POST(postRequest({ address: '1 A St, LA CA' }));
 
@@ -44,8 +48,10 @@ describe('POST /api/risk', () => {
       ok: true,
       matched: '1 A ST, LA, CA',
       riskProfile: FIRE_PROFILE,
+      narrative: 'Grounded risk summary.',
     });
     expect(assess).toHaveBeenCalledWith({ lat: 34, lon: -118 });
+    expect(narrateMock).toHaveBeenCalledWith(FIRE_PROFILE, '1 A ST, LA, CA', null);
   });
 
   it('returns ok:false with the reason on a geocode miss (no_match)', async () => {

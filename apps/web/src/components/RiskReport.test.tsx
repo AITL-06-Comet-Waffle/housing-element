@@ -33,6 +33,7 @@ describe('RiskReport', () => {
     const result: RiskApiResponse = {
       ok: true,
       matched: '1234 PACIFIC COAST HWY, MALIBU, CA, 90265',
+      narrative: 'Grounded summary — verify with a licensed inspector before purchase.',
       riskProfile: {
         fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' },
         flood: { level: 'Minimal', zone: 'X' },
@@ -42,6 +43,7 @@ describe('RiskReport', () => {
     render(<RiskReport result={result} />);
 
     expect(screen.getByText(/1234 PACIFIC COAST HWY/)).toBeInTheDocument();
+    expect(screen.getByText(/verify with a licensed inspector/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Wildfire' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Flood' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Earthquake' })).toBeInTheDocument();

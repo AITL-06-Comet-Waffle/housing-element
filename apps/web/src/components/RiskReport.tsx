@@ -69,6 +69,11 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
       <p className="text-sm text-gray-500">
         Showing risk for: <span className="font-medium text-gray-700">{result.matched}</span>
       </p>
+      {result.narrative && (
+        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+          {result.narrative}
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         <HazardCard
           title="Wildfire"

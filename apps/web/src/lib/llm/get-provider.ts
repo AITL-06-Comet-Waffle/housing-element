@@ -25,3 +25,19 @@ export function getProvider(): LLMProvider {
   }
   return buildRagProvider(base) ?? base;
 }
+
+/**
+ * Select the LLM used for risk narration, or `null` to fall back to the
+ * deterministic template. Returns the OpenAI provider only when LLM_PROVIDER=openai
+ * and a key is set — never RAG-wrapped (narration takes facts, not a query), and
+ * never throws (a misconfig degrades to the template rather than failing the route).
+ */
+export function getNarrator(): LLMProvider | null {
+  if (process.env.LLM_PROVIDER !== 'openai') return null;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn('[getNarrator] LLM_PROVIDER=openai but OPENAI_API_KEY is unset; using template.');
+    return null;
+  }
+  return new OpenAIProvider(new OpenAI({ apiKey }));
+}

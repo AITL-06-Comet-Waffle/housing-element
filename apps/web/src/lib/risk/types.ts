@@ -55,5 +55,5 @@ export type GeocodeFailureReason = 'no_match' | 'out_of_state';
  * (Malformed requests are 400 and server faults are 500, each `{ error }`.)
  */
 export type RiskApiResponse =
-  | { ok: true; matched: string; riskProfile: RiskProfile }
+  | { ok: true; matched: string; riskProfile: RiskProfile; narrative: string }
   | { ok: false; reason: GeocodeFailureReason };
