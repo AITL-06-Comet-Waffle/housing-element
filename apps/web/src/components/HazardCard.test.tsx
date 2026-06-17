@@ -23,10 +23,10 @@ describe('HazardCard', () => {
     expect(screen.queryByText(/Responsibility Area/)).not.toBeInTheDocument();
   });
 
-  it('applies a tone class derived from severity', () => {
+  it('applies a tone derived from severity (very-high → red)', () => {
     const { container } = render(
       <HazardCard title="Earthquake" rating=">= 0.6 g" severity="very-high" />,
     );
-    expect(container.firstChild).toHaveClass('bg-red-50');
+    expect((container.firstChild as HTMLElement).className).toContain('red');
   });
 });

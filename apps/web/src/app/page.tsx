@@ -31,11 +31,12 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-4 py-10">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Housing Element</h1>
-        <p className="text-gray-500">
-          Enter a California street address to see its forward-looking climate-risk profile.
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-8 px-5 py-12 sm:py-16">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Housing Element</h1>
+        <p className="text-base text-slate-400 sm:text-lg">
+          Enter a California address to see its wildfire, flood, and earthquake risk — with a
+          grounded safety read.
         </p>
       </header>
       <AddressForm onSubmit={handleSubmit} disabled={loading} />

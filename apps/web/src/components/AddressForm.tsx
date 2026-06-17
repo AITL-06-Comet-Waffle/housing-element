@@ -21,7 +21,7 @@ export function AddressForm({ onSubmit, disabled = false }: AddressFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
       <input
         type="text"
         value={address}
@@ -29,12 +29,12 @@ export function AddressForm({ onSubmit, disabled = false }: AddressFormProps) {
         disabled={disabled}
         placeholder="Enter a California street address…"
         aria-label="Street address"
-        className="flex-1 rounded border border-gray-300 px-3 py-2 disabled:opacity-50"
+        className="flex-1 rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-base text-white placeholder:text-slate-500 outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-400/40 disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={disabled}
-        className="rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+        className="rounded-lg bg-sky-500 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-sky-400 disabled:opacity-50"
       >
         Check risk
       </button>

@@ -12,24 +12,42 @@ interface HazardCardProps {
   severity: Severity;
   /** Optional supporting line, e.g. "State Responsibility Area (SRA)". */
   detail?: ReactNode;
+  /** Optional leading emoji/icon for quick recognition. */
+  icon?: string;
 }
 
-const TONE: Record<Severity, string> = {
-  'very-high': 'border-red-300 bg-red-50 text-red-800',
-  high: 'border-orange-300 bg-orange-50 text-orange-800',
-  moderate: 'border-amber-300 bg-amber-50 text-amber-800',
-  low: 'border-lime-300 bg-lime-50 text-lime-800',
-  none: 'border-green-300 bg-green-50 text-green-800',
-  unknown: 'border-gray-300 bg-gray-50 text-gray-700',
+const TONE: Record<Severity, { ring: string; text: string; badge: string }> = {
+  'very-high': { ring: 'border-red-500/40', text: 'text-red-300', badge: 'bg-red-500/15' },
+  high: { ring: 'border-orange-500/40', text: 'text-orange-300', badge: 'bg-orange-500/15' },
+  moderate: { ring: 'border-amber-500/40', text: 'text-amber-200', badge: 'bg-amber-500/15' },
+  low: { ring: 'border-lime-500/40', text: 'text-lime-200', badge: 'bg-lime-500/15' },
+  none: { ring: 'border-emerald-500/40', text: 'text-emerald-300', badge: 'bg-emerald-500/15' },
+  unknown: { ring: 'border-slate-600', text: 'text-slate-300', badge: 'bg-slate-500/15' },
 };
 
-/** One hazard's result: title, rating, and an optional supporting detail line. */
-export function HazardCard({ title, rating, severity, detail }: HazardCardProps) {
+/** One hazard as its own section: icon + name + supporting detail, and a bold rating badge. */
+export function HazardCard({ title, rating, severity, detail, icon }: HazardCardProps) {
+  const tone = TONE[severity];
   return (
-    <div className={`rounded-lg border p-4 ${TONE[severity]}`}>
-      <h3 className="text-sm font-medium uppercase tracking-wide opacity-70">{title}</h3>
-      <p className="mt-1 text-2xl font-semibold">{rating}</p>
-      {detail && <p className="mt-1 text-sm opacity-80">{detail}</p>}
-    </div>
+    <section
+      className={`flex items-center justify-between gap-4 rounded-2xl border ${tone.ring} bg-white/5 p-5`}
+    >
+      <div className="flex items-center gap-3">
+        {icon && (
+          <span className="text-2xl" aria-hidden>
+            {icon}
+          </span>
+        )}
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">{title}</h3>
+          {detail && <p className="mt-1 text-sm text-slate-400">{detail}</p>}
+        </div>
+      </div>
+      <span
+        className={`shrink-0 rounded-full px-4 py-1.5 text-xl font-bold ${tone.badge} ${tone.text}`}
+      >
+        {rating}
+      </span>
+    </section>
   );
 }

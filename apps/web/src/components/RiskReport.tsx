@@ -38,18 +38,18 @@ const MISS_MESSAGE: Record<string, string> = {
   out_of_state: 'This tool currently covers California addresses only.',
 };
 
-/** Renders the risk assessment: loading/error/miss states, or the per-hazard cards. */
+/** Renders the risk assessment: loading/error/miss states, or per-hazard sections + narrative. */
 export function RiskReport({ loading = false, error = false, result = null }: RiskReportProps) {
   if (loading) {
     return (
-      <p role="status" className="text-gray-500">
+      <p role="status" className="text-lg text-slate-400">
         Assessing risk…
       </p>
     );
   }
   if (error) {
     return (
-      <p role="alert" className="text-red-600">
+      <p role="alert" className="text-lg text-red-400">
         Something went wrong. Please try again.
       </p>
     );
@@ -57,7 +57,10 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
   if (!result) return null;
   if (!result.ok) {
     return (
-      <p role="alert" className="text-amber-700">
+      <p
+        role="alert"
+        className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-base text-amber-200"
+      >
         {MISS_MESSAGE[result.reason]}
       </p>
     );
@@ -65,18 +68,15 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
 
   const { fire, flood, quake } = result.riskProfile;
   return (
-    <section className="flex flex-col gap-4" aria-label="Risk report">
-      <p className="text-sm text-gray-500">
-        Showing risk for: <span className="font-medium text-gray-700">{result.matched}</span>
+    <section className="flex flex-col gap-6" aria-label="Risk report">
+      <p className="text-sm text-slate-400">
+        Showing risk for <span className="font-semibold text-slate-200">{result.matched}</span>
       </p>
-      {result.narrative && (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
-          {result.narrative}
-        </p>
-      )}
-      <div className="grid gap-4 sm:grid-cols-3">
+
+      <div className="flex flex-col gap-4">
         <HazardCard
           title="Wildfire"
+          icon="🔥"
           rating={fire.hazardClass}
           severity={FIRE_SEVERITY[fire.hazardClass] ?? 'unknown'}
           detail={
@@ -87,12 +87,14 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
         />
         <HazardCard
           title="Flood"
+          icon="🌊"
           rating={flood.level}
           severity={FLOOD_SEVERITY[flood.level] ?? 'unknown'}
           detail={flood.zone ? `FEMA Zone ${flood.zone}` : 'No mapped FEMA flood panel'}
         />
         <HazardCard
           title="Earthquake"
+          icon="🏚️"
           rating={quake.pgaBand ? `${quake.pgaBand} PGA` : 'No data'}
           severity={quake.pgaBand ? (PGA_SEVERITY[quake.pgaBand] ?? 'unknown') : 'unknown'}
           detail={
@@ -102,10 +104,22 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
           }
         />
       </div>
+
+      {result.narrative && (
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+            Overall evaluation
+          </h2>
+          <p className="mt-3 whitespace-pre-line text-base leading-relaxed text-slate-200">
+            {result.narrative}
+          </p>
+        </div>
+      )}
+
       {result.citations.length > 0 && (
-        <div className="border-t border-gray-200 pt-3">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-gray-400">Sources</h4>
-          <ul className="mt-1 space-y-0.5 text-xs text-gray-500">
+        <div className="border-t border-white/10 pt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Sources</h3>
+          <ul className="mt-2 space-y-1 text-xs text-slate-500">
             {result.citations.map((citation, i) => (
               <li key={i}>
                 {citation.source}
