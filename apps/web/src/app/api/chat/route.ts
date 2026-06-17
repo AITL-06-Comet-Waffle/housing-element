@@ -2,6 +2,10 @@ import { getProvider } from '@/lib/llm/get-provider';
 import type { Message } from '@/lib/llm/types';
 
 /**
+ * PARKED / legacy. The product's primary surface is `POST /api/risk`. This
+ * conversational endpoint is kept (not deleted) for a future Phase 1.5 follow-up
+ * mode; it is not part of the current assessment flow.
+ *
  * Chat endpoint. Accepts the full conversation and returns the assistant's reply.
  *
  * Request body: `{ messages: Message[] }`

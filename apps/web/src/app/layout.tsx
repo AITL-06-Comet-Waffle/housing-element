@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Housing Element',
+  title: 'Housing Element — CA Address Risk',
   description:
-    'Conversational real estate discovery — localized climate and insurance risk for home buyers.',
+    'Wildfire, flood, and earthquake risk for a California address, with a grounded safety evaluation.',
 };
 
 export default function RootLayout({

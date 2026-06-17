@@ -1,8 +1,13 @@
 import type { LLMProvider, Message } from '@/lib/llm/types';
-import { geocodeAddress, type GeoResult, type FetchFn } from './geocode';
+import type { GeoResult, FetchFn } from './geocode';
 import { searchFireIncidents, type PineconeNamespace } from './pinecone-retriever';
 import { formatFireContext } from './format-context';
 
+/**
+ * Legacy chat RAG (PARKED). County-level, fire-only retrieval that augments the
+ * chat LLM. Superseded for risk by `lib/rag/hazard-color.ts` (multi-hazard color);
+ * kept for the parked `/api/chat`. Not used by `/api/risk`.
+ */
 export class RagProvider implements LLMProvider {
   constructor(
     private readonly inner: LLMProvider,

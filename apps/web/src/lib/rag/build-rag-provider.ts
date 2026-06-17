@@ -4,6 +4,11 @@ import { geocodeAddress } from './geocode';
 import type { PineconeNamespace } from './pinecone-retriever';
 import { RagProvider } from './rag-provider';
 
+/**
+ * Build the PARKED chat RagProvider from env (RAG_ENABLED, PINECONE_*,
+ * NOMINATIM_USER_AGENT). Used only by the legacy `/api/chat`; `/api/risk` uses
+ * `lib/rag/build-color.ts` instead.
+ */
 export function buildRagProvider(inner: LLMProvider): LLMProvider | null {
   if (process.env.RAG_ENABLED !== 'true') return null;
 
