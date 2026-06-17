@@ -12,6 +12,7 @@ import { getRiskProvider } from '@/lib/risk/risk-provider';
 import { narrate } from '@/lib/llm/narrate';
 import { retrieveColor } from '@/lib/rag/build-color';
 import { buildCitations } from '@/lib/risk/citations';
+import { clearAssessmentCache } from '@/lib/risk/cache';
 import type { RiskProfile } from '@/lib/risk/types';
 import type { RiskProvider } from '@/lib/risk/risk-provider';
 
@@ -36,6 +37,7 @@ const FIRE_PROFILE: RiskProfile = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clearAssessmentCache();
 });
 
 describe('POST /api/risk', () => {
@@ -97,5 +99,20 @@ describe('POST /api/risk', () => {
     const res = await POST(postRequest({ address: '1 A St, LA CA' }));
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: 'Risk lookup failed.' });
+  });
+
+  it('caches a successful assessment — a repeat (any casing/spacing) is not re-computed', async () => {
+    geocodeMock.mockResolvedValue({ ok: true, point: { lat: 34, lon: -118 }, matched: '1 A ST, LA, CA' });
+    const assess = vi.fn().mockResolvedValue(FIRE_PROFILE);
+    getRiskProviderMock.mockReturnValue({ assess } as RiskProvider);
+    retrieveColorMock.mockResolvedValue({ items: [], context: '' });
+    narrateMock.mockResolvedValue('n');
+
+    const first = await POST(postRequest({ address: '1 A St, LA CA' }));
+    const second = await POST(postRequest({ address: '  1 a st,  la ca ' }));
+
+    await expect(second.json()).resolves.toEqual(await first.json());
+    expect(geocodeMock).toHaveBeenCalledTimes(1); // second served from cache
+    expect(assess).toHaveBeenCalledTimes(1);
   });
 });

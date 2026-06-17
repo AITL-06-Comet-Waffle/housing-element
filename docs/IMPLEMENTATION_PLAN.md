@@ -7,6 +7,13 @@
 > Derived from a design interview (the "grill"). Decisions and their rationale are summarized
 > below; the phased build follows.
 
+> **Build status (2026-06): phases 0–4 + Phase 5 are BUILT and tested.** This plan is now largely
+> historical — see [`README.md`](../README.md) for setup/run and [`CLAUDE.md`](../CLAUDE.md) for the
+> live architecture. Two decisions were refined during the build: **Q5** — the Census geocoder is
+> TIGER street-interpolation, so the "precision gate" reduced to match-count + CA membership (no
+> rooftop/parcel tiers); **Q13** — historical *color* spans all three hazards (fire DINS, NOAA floods,
+> USGS quakes), not fire-only (still color, never a risk source).
+
 ## What this is (MVP scope)
 
 A buyer enters a **California street address** and receives a **forward-looking risk profile** for

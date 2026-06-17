@@ -13,32 +13,29 @@ authoritative geospatial layers (point-in-polygon); the LLM explains them and ne
 > data. The full docs are bundled at `node_modules/next/dist/docs/` — consult them before writing
 > Next-specific code (route handlers, config, etc.).
 
-## Where the code is today vs. where it's going
+## Current state — the pivot is BUILT (phases 0–5)
 
-**Today (on `main`) — a chat shell + a fire-only RAG layer that is being superseded:**
-
-- Next 16 chat UI → `POST /api/chat` → `getProvider()` → `LLMProvider` (deterministic **mock** by
-  default; **OpenAI** when `LLM_PROVIDER=openai`).
-- With `RAG_ENABLED=true`, `getProvider()` wraps the provider in `RagProvider`: geocodes the last
-  user message via Nominatim → county, vector-searches Pinecone (CAL FIRE DINS post-fire summaries)
-  filtered by county, injects the hits as context. **Fire-only, county-level, historical.**
-- A Postgres DB (`homebuyer_data`, port 5433) holds **parcel-level** CAL FIRE DINS inspections;
-  `scripts/pinecone/` aggregate them to (incident, county, city) summaries for Pinecone.
-
-**Target (the pivot) — per the plan:** address-*assessment*, not chat; *forward-looking* hazard
-layers, not historical damage; *structured spatial lookups*, not vector search, for the risk numbers.
+The forward-looking address-risk assessment is live and tested; the old chat shell is parked (not
+deleted).
 
 ```
 address (form)
-  → Census geocode  → precision gate
-  → PostGIS point-in-polygon (FHSZ / NFHL / USGS + Alquist-Priolo)   ← risk FACTS (tool-use)
-  → [Pinecone DINS retrieval]                                        ← narrative COLOR (vector RAG)
-  → LLM grounded narration                                           ← never invents numbers
-  → POST /api/risk → { riskProfile, narrative, citations }
+  → Census geocode (CA-only, first match)                              ← lib/geocode/census.ts
+  → PostGIS point-in-polygon: FHSZ · NFHL · USGS PGA · Alquist-Priolo  ← risk FACTS (tool-use)
+  → Pinecone × 3 (past fires/floods/quakes, distance-keyed)            ← historical COLOR (RAG)
+  → LLM grounded narration (template fallback; never invents numbers)  ← lib/llm/narrate.ts
+  → POST /api/risk → { ok, matched, riskProfile, narrative, citations }   (cached by address)
+UI: AddressForm → RiskReport → 3 HazardCards + narrative + Sources (cards render even if the LLM fails).
 ```
 
-The current chat/RAG code is refactored (RAG → color-only) or parked (`/api/chat` → phase 1.5),
-**not deleted**. See the plan for the migration.
+- **PostGIS** (`homebuyer_data`, :5433) holds four hazard layers — `hazard_fhsz`, `hazard_flood`,
+  `hazard_pga`, `hazard_ap_zones` — loaded by `scripts/ingest/*.py`, queried Node-direct behind the
+  `RiskProvider` seam (`lib/risk/`).
+- **Pinecone** (3 indexes: fire DINS / NOAA floods / USGS quakes) supplies historical color behind
+  `RAG_ENABLED` (`lib/rag/hazard-color.ts`). Color is best-effort and never a risk rating.
+- **Parked:** `app/api/chat/route.ts` + the chat `RagProvider` / `build-rag-provider` (reserved for a
+  Phase-1.5 conversational mode). The risk path does not use them.
+- See **`README.md`** for full local setup + run steps.
 
 ## Key decisions (summary — full rationale in the plan)
 
@@ -46,13 +43,17 @@ The current chat/RAG code is refactored (RAG → color-only) or parked (`/api/ch
 - **Structured-first hybrid:** PostGIS spatial joins are the source of truth for risk numbers;
   Pinecone is unstructured color; the LLM narrates. Vector search is *not* the primary retrieval.
 - **Address-only input; assessment, not discovery.** Geocoding is critical-path — US **Census**
-  geocoder (free), with a **mandatory precision gate**. ZIP / natural-language discovery deferred.
+  geocoder (free). *(As built: Census is TIGER street-interpolation with no rooftop/parcel tiers, so
+  the "precision gate" reduced to match-count + CA membership — first CA match wins.)* ZIP /
+  natural-language discovery deferred.
 - **California-only**, **Tier-1 hazards** (fire / flood / quake). Insurance + water = phase 2.
 - **Pre-ingest** hazard layers into **PostGIS** (offline Python ETL); query **Node-direct** behind a
   new **`RiskProvider`** seam. A runtime FastAPI `services/ml` is deferred until a model needs it.
 - **Per-hazard native scales**, no fake composite. The LLM narrates computed values only.
 - **The graded "AI element" = RAG + tool-use** (PostGIS facts + Pinecone color + LLM generation).
-  No LLM fine-tuning; a DINS *structure-vulnerability* classifier is a phase-2 ML stretch.
+  *(As built: color spans all three hazards — fire DINS, NOAA floods, USGS quakes — not fire-only;
+  Q13 still holds — flood/quake corpora are color, never a risk source.)* No LLM fine-tuning; a DINS
+  *structure-vulnerability* classifier is a phase-2 ML stretch.
 
 ## Conventions
 
@@ -84,12 +85,15 @@ The current chat/RAG code is refactored (RAG → color-only) or parked (`/api/ch
 
 ## Status & gaps
 
-- **The pivot is planned, not built.** Phases 0–5 are tracked tasks; see the plan. The risk features
-  (PostGIS spine, `/api/risk`, Census geocode, precision gate, per-hazard cards) **do not exist yet**.
-- Current code is fire-only, county-level, Nominatim-geocoded RAG over *historical* DINS data — the
-  thing being replaced.
-- No persistence, auth, rate limiting, streaming, observability, CI, E2E, or deployment config.
-- `README.md` still describes the old chat-shell product and needs the same update (Phase 5).
+- **Built & tested (phases 0–5):** Census geocode, PostGIS spine + four hazard layers, `RiskProvider`,
+  `POST /api/risk`, LLM narration (+ deterministic template fallback), 3-corpus Pinecone color +
+  citations, per-hazard cards, and per-address caching. Vitest suite green; `tsc` + ESLint clean;
+  `next build` passes.
+- **Docs:** `README.md` rewritten with full local setup/run; this guide updated. The plan-of-record is
+  now historical — its Q5 precision gate + Q13 fire-only color were simplified/extended (see above).
+- **Deferred:** auth, rate limiting, streaming, observability, CI, E2E, deployment; insurance + water
+  hazards; a DINS structure-vulnerability ML model; a runtime FastAPI `services/ml`; national coverage;
+  ZIP / NL discovery; Phase-1.5 conversational follow-up.
 - 2 moderate npm advisories unreviewed (`npm audit`).
 
 ## How we got here (history)
@@ -99,4 +103,9 @@ The current chat/RAG code is refactored (RAG → color-only) or parked (`/api/ch
 - **Step 2** — `OpenAIProvider` (injected client, offline-testable) selected via
   `getProvider()` / `LLM_PROVIDER`.
 - **Fire RAG layer** — `RagProvider` + Pinecone DINS + Nominatim geocode (county-level); Postgres
-  DINS + `scripts/pinecone/` aggregation. **Superseded by the plan above.**
+  DINS + `scripts/pinecone/` aggregation. **Now parked** (legacy `/api/chat`).
+- **The pivot (phases 0–4)** — PostGIS hazard spine + Census geocode + `RiskProvider` + `/api/risk`
+  (fire, then +flood/quake) → LLM grounded narration → 3-corpus Pinecone color + citations. Built
+  test-first; data loaded into a local PostGIS container.
+- **Phase 5** — per-address caching, formally parked `/api/chat`, and truth-in-docs (README + this
+  guide rewritten).
