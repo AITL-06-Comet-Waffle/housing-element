@@ -44,6 +44,12 @@ describe('buildNarrationMessages', () => {
     expect(msgs[0].content).toContain('0.4-0.6 g');
     expect(msgs[0].content).toMatch(/never invent/i);
   });
+
+  it('appends the historical color block (framed as history, not a rating) when provided', () => {
+    const msgs = buildNarrationMessages(PROFILE, MATCHED, '- [fire] Camp Fire (Butte County, 2018): ...');
+    expect(msgs[0].content).toContain('Camp Fire');
+    expect(msgs[0].content).toMatch(/NOT the current rating/i);
+  });
 });
 
 describe('narrate', () => {
@@ -65,5 +71,11 @@ describe('narrate', () => {
   it('falls back to the template when the LLM returns blank', async () => {
     const llm = fakeLLM(vi.fn().mockResolvedValue('   '));
     expect(await narrate(PROFILE, MATCHED, llm)).toBe(templateNarrative(PROFILE, MATCHED));
+  });
+
+  it('passes the historical color context through to the LLM', async () => {
+    const gen = vi.fn().mockResolvedValue('ok');
+    await narrate(PROFILE, MATCHED, fakeLLM(gen), 'HISTORICAL-COLOR-CTX');
+    expect(gen.mock.calls[0][0][0].content).toContain('HISTORICAL-COLOR-CTX');
   });
 });

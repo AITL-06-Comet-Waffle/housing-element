@@ -102,6 +102,19 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
           }
         />
       </div>
+      {result.citations.length > 0 && (
+        <div className="border-t border-gray-200 pt-3">
+          <h4 className="text-xs font-medium uppercase tracking-wide text-gray-400">Sources</h4>
+          <ul className="mt-1 space-y-0.5 text-xs text-gray-500">
+            {result.citations.map((citation, i) => (
+              <li key={i}>
+                {citation.source}
+                {citation.detail ? ` — ${citation.detail}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

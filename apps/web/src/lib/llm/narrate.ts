@@ -56,16 +56,19 @@ export function templateNarrative(profile: RiskProfile, matched: string): string
 
 // --- LLM narration ---------------------------------------------------------
 
-/** The single user message handed to the LLM: the facts + a no-invention instruction. */
-export function buildNarrationMessages(profile: RiskProfile, matched: string): Message[] {
+/** The single user message handed to the LLM: facts, optional historical color, a no-invention instruction. */
+export function buildNarrationMessages(profile: RiskProfile, matched: string, color = ''): Message[] {
   const facts = JSON.stringify({ address: matched, ...profile }, null, 2);
+  const colorBlock = color
+    ? `\n\n${color}\nThese are verified records; some events may postdate your training data — treat them as accurate and do NOT substitute a fire you happen to recognize. In your summary, specifically name the FIRST wildfire listed above (the most destructive nearby) with its year, as historical context, making clear it is a past event and NOT the current rating.`
+    : '';
   return [
     {
       role: 'user',
       content:
         'Write a brief, grounded wildfire/flood/earthquake risk evaluation for this California ' +
         'address. Use ONLY these computed values — never invent, estimate, or change a number. ' +
-        `Explain what each rating means, then give 2-3 concrete next steps.\n\n${facts}`,
+        `Explain what each rating means, then give 2-3 concrete next steps.\n\n${facts}${colorBlock}`,
     },
   ];
 }
@@ -80,10 +83,11 @@ export async function narrate(
   profile: RiskProfile,
   matched: string,
   llm: LLMProvider | null,
+  color = '',
 ): Promise<string> {
   if (!llm) return templateNarrative(profile, matched);
   try {
-    const out = (await llm.generate(buildNarrationMessages(profile, matched))).trim();
+    const out = (await llm.generate(buildNarrationMessages(profile, matched, color))).trim();
     return out || templateNarrative(profile, matched);
   } catch {
     return templateNarrative(profile, matched);

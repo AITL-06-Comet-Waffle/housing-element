@@ -1,6 +1,8 @@
 import { geocode } from '@/lib/geocode/census';
 import { getNarrator } from '@/lib/llm/get-provider';
 import { narrate } from '@/lib/llm/narrate';
+import { retrieveColor } from '@/lib/rag/build-color';
+import { buildCitations } from '@/lib/risk/citations';
 import { getRiskProvider } from '@/lib/risk/risk-provider';
 
 /**
@@ -39,8 +41,10 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ ok: false, reason: geo.reason });
     }
     const riskProfile = await getRiskProvider().assess(geo.point);
-    const narrative = await narrate(riskProfile, geo.matched, getNarrator());
-    return Response.json({ ok: true, matched: geo.matched, riskProfile, narrative });
+    const color = await retrieveColor(geo.point, geo.matched);
+    const narrative = await narrate(riskProfile, geo.matched, getNarrator(), color.context);
+    const citations = buildCitations(color.items.map((item) => item.source));
+    return Response.json({ ok: true, matched: geo.matched, riskProfile, narrative, citations });
   } catch (err) {
     console.error('[api/risk] lookup failed', err);
     return Response.json({ error: 'Risk lookup failed.' }, { status: 500 });

@@ -34,6 +34,10 @@ describe('RiskReport', () => {
       ok: true,
       matched: '1234 PACIFIC COAST HWY, MALIBU, CA, 90265',
       narrative: 'Grounded summary — verify with a licensed inspector before purchase.',
+      citations: [
+        { source: 'CAL FIRE Fire Hazard Severity Zones', detail: 'SRA effective 2024' },
+        { source: 'USGS — M6.1 near Huron (1905)' },
+      ],
       riskProfile: {
         fire: { hazardClass: 'Very High', responsibilityArea: 'LRA' },
         flood: { level: 'Minimal', zone: 'X' },
@@ -44,6 +48,8 @@ describe('RiskReport', () => {
 
     expect(screen.getByText(/1234 PACIFIC COAST HWY/)).toBeInTheDocument();
     expect(screen.getByText(/verify with a licensed inspector/i)).toBeInTheDocument();
+    expect(screen.getByText(/CAL FIRE Fire Hazard Severity Zones/)).toBeInTheDocument();
+    expect(screen.getByText(/USGS — M6.1 near Huron/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Wildfire' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Flood' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Earthquake' })).toBeInTheDocument();

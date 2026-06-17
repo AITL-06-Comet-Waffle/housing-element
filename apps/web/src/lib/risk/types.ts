@@ -49,11 +49,17 @@ export interface RiskProfile {
 /** Why a geocode did not yield a usable California point. */
 export type GeocodeFailureReason = 'no_match' | 'out_of_state';
 
+/** A provenance entry shown in the report's "Sources" footer. */
+export interface Citation {
+  source: string;
+  detail?: string;
+}
+
 /**
  * The `POST /api/risk` body on a 200. Either a full assessment or a graceful
  * geocode miss — both are 200 so the client branches on `ok`, not on status.
  * (Malformed requests are 400 and server faults are 500, each `{ error }`.)
  */
 export type RiskApiResponse =
-  | { ok: true; matched: string; riskProfile: RiskProfile; narrative: string }
+  | { ok: true; matched: string; riskProfile: RiskProfile; narrative: string; citations: Citation[] }
   | { ok: false; reason: GeocodeFailureReason };
