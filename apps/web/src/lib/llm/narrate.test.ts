@@ -21,6 +21,9 @@ describe('templateNarrative', () => {
     expect(text).toContain('Zone AE');
     expect(text).toContain('0.4-0.6 g');
     expect(text).toContain('Alquist-Priolo');
+    // Weaves in the plain-English shaking rating + meaning alongside the band.
+    expect(text).toMatch(/very strong shaking/i);
+    expect(text).toMatch(/structural[- ]damage/i);
   });
 
   it("describes 'None' / 'Minimal' without overstating risk", () => {
@@ -33,6 +36,10 @@ describe('templateNarrative', () => {
     expect(text).toMatch(/not within a mapped/i);
     expect(text).toMatch(/minimal flood risk/i);
     expect(text).toMatch(/not within a mapped Alquist-Priolo/i);
+    // The coarse '< 0.2 g' band reads as a range and never overstates the shaking.
+    expect(text).toMatch(/very low to moderate/i);
+    expect(text).not.toMatch(/\bsevere\b/i);
+    expect(text).not.toMatch(/structural[- ]damage/i);
   });
 });
 
