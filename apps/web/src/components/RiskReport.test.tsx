@@ -56,6 +56,7 @@ describe('RiskReport', () => {
     expect(screen.getByText('Very High')).toBeInTheDocument(); // fire
     expect(screen.getByText('Minimal')).toBeInTheDocument(); // flood level
     expect(screen.getByText('0.4-0.6 g PGA')).toBeInTheDocument(); // quake band
+    expect(screen.getByText('Shaking: Very high')).toBeInTheDocument(); // quake plain-English rating
     expect(screen.getByText(/Alquist-Priolo/)).toBeInTheDocument(); // fault detail
   });
 });

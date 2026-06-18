@@ -1,5 +1,6 @@
 import type { LLMProvider, Message } from '@/lib/llm/types';
 import type { FireRisk, FloodRisk, QuakeRisk, RiskProfile } from '@/lib/risk/types';
+import { explainPga } from '@/lib/risk/pga-scale';
 
 // --- Deterministic template narrative -------------------------------------
 // Grounded by construction (uses only the computed values). Serves as the
@@ -35,8 +36,10 @@ function floodSentence(flood: FloodRisk): string {
 }
 
 function quakeSentence(quake: QuakeRisk): string {
+  const pga = explainPga(quake.pgaBand);
   const shaking = quake.pgaBand
-    ? `expected peak ground acceleration is ${quake.pgaBand} (USGS, 2% chance in 50 years)`
+    ? `expected peak ground acceleration is ${quake.pgaBand} (USGS, 2% chance in 50 years), ` +
+      `which is ${pga.rating} on a plain-English shaking scale — ${pga.meaning}`
     : 'ground-shaking data is unavailable for this location';
   const fault = quake.faultZone
     ? ', and it lies within an Alquist-Priolo Earthquake Fault Zone, where surface fault rupture is a regulated hazard'

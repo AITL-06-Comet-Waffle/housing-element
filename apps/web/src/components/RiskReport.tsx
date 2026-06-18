@@ -1,4 +1,5 @@
 import type { FloodLevel, RiskApiResponse } from '@/lib/risk/types';
+import { explainPga } from '@/lib/risk/pga-scale';
 import { HazardCard, type Severity } from './HazardCard';
 
 interface RiskReportProps {
@@ -22,12 +23,6 @@ const FLOOD_SEVERITY: Record<FloodLevel, Severity> = {
   Minimal: 'low',
   Undetermined: 'unknown',
   None: 'none',
-};
-const PGA_SEVERITY: Record<string, Severity> = {
-  '>= 0.6 g': 'very-high',
-  '0.4-0.6 g': 'high',
-  '0.2-0.4 g': 'moderate',
-  '< 0.2 g': 'low',
 };
 const RA_LABEL: Record<string, string> = {
   SRA: 'State Responsibility Area (SRA)',
@@ -67,6 +62,7 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
   }
 
   const { fire, flood, quake } = result.riskProfile;
+  const pga = explainPga(quake.pgaBand);
   return (
     <section className="flex flex-col gap-6" aria-label="Risk report">
       <p className="text-sm text-slate-400">
@@ -96,11 +92,16 @@ export function RiskReport({ loading = false, error = false, result = null }: Ri
           title="Earthquake"
           icon="🏚️"
           rating={quake.pgaBand ? `${quake.pgaBand} PGA` : 'No data'}
-          severity={quake.pgaBand ? (PGA_SEVERITY[quake.pgaBand] ?? 'unknown') : 'unknown'}
+          severity={pga.severity}
           detail={
-            quake.faultZone
-              ? 'In an Alquist-Priolo fault-rupture zone'
-              : 'Not in a mapped fault-rupture zone'
+            <>
+              <span className="block">Shaking: {pga.rating}</span>
+              <span className="block">
+                {quake.faultZone
+                  ? 'In an Alquist-Priolo fault-rupture zone'
+                  : 'Not in a mapped fault-rupture zone'}
+              </span>
+            </>
           }
         />
       </div>
