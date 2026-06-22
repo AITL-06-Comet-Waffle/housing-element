@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Ignore VSCode configurations
+.DS_Store 
+
+# Ignore data folder
+scripts/ca_apr_datascripts/pinecone/apr_notes.jsonl
+__pycache__/
