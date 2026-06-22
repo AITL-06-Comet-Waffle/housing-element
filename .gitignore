@@ -146,5 +146,8 @@ vite.config.ts.timestamp-*
 .DS_Store 
 
 # Ignore data folder
-scripts/ca_apr_datascripts/pinecone/apr_notes.jsonl
+scripts/ca_apr_data
+
+# Ignore generated data and caches
+scripts/pinecone/apr_notes.jsonl
 __pycache__/
